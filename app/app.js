@@ -7,6 +7,9 @@
   const FREE_LIMITS = false;
   const FREE_MAX = 3, FREE_DAYS = 7;
   const LS_PENDING_KEY = 'nprojects-license-pending';
+  const LS_DEVICE = 'nprojects-device-id';
+  // Cada cuánto se vuelve a comprobar la licencia con el servidor (si hay conexión)
+  const LICENSE_CHECK_MS = 7 * 86400e3;
   const LS_KEY = 'nprojects-data-v1';
   const LS_PREFS = 'nprojects-prefs-v1';
   const LS_METRICS = 'nprojects-metrics-v1';
@@ -32,7 +35,7 @@
   let viewDate = null;
   let busy = false;
   let pipWin = null;
-  let prefs = { compact: false, stats: true, fit: true, invite: null, pipBig: false, license: null, licenseEmail: null };
+  let prefs = { compact: false, stats: true, fit: true, invite: null, pipBig: false, license: null, licenseEmail: null, licenseCheckedAt: null };
   let activating = false;
   let installEvt = null;
   let dismissedForgot = null;
@@ -379,33 +382,77 @@
       <div class="panel">
         <h3>Nprojects Pro <span class="pro-badge">Activado</span></h3>
         <p class="small muted">Clave ${esc(prefs.license)}${prefs.licenseEmail ? ` · ${esc(prefs.licenseEmail)}` : ''}. Gracias por apoyar nprojects.</p>
+        <p class="small muted">Tu licencia es personal y vale para 3 equipos o navegadores. Si cambias de ordenador, quítala aquí primero para liberar el hueco.</p>
         <button data-act="unlicense">Quitar la licencia de este navegador</button>
       </div>`;
     return `
       <form class="panel" data-form="license">
         <h3>Nprojects Pro</h3>
-        <p class="small muted">Hasta 10 proyectos a la vez, historial completo, estadísticas y exportación. Pago único de 29 €.</p>
+        <p class="small muted">Hasta 10 proyectos a la vez, historial completo, estadísticas y exportación. Pago único de 29 €. Una licencia personal para 3 equipos o navegadores.</p>
         <div class="addrow"><input name="key" placeholder="NPRJ-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" aria-label="Clave de licencia"><button class="primary" type="submit" ${activating ? 'disabled' : ''}>${activating ? 'Comprobando…' : 'Activar'}</button></div>
         <p class="small muted">¿Aún no la tienes? <a href="../comprar/" target="_blank" rel="noopener">Comprar Pro</a></p>
       </form>`;
   }
 
+  // ---------- Licencia Pro ----------
+  // Identificador aleatorio de esta instalación (no cambia al quitar la licencia). Sirve para limitar
+  // cuántos equipos usan una misma clave.
+  function deviceId() {
+    let id = null;
+    try { id = localStorage.getItem(LS_DEVICE); } catch (e) {}
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15; return (c === 'x' ? r : (r & 3) | 8).toString(16);
+      }));
+      try { localStorage.setItem(LS_DEVICE, id); } catch (e) {}
+    }
+    return id;
+  }
+  // Nombre orientativo del equipo («Chrome · Windows»), para ayudarte si escribes a soporte
+  function deviceLabel() {
+    const ua = navigator.userAgent;
+    const b = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Navegador';
+    const o = /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : '';
+    return o ? `${b} · ${o}` : b;
+  }
+  function licenseCall(key, action) {
+    return fetch(CFG.supabaseUrl + '/functions/v1/activate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey || '' },
+      body: JSON.stringify({ key, device: deviceId(), label: deviceLabel(), action })
+    }).then(r => r.json().catch(() => ({})));
+  }
+  function dropLicense() { prefs.license = null; prefs.licenseEmail = null; prefs.licenseCheckedAt = null; prefsSave(); }
+
   // Comprueba la clave con el servidor y, si es válida, activa Pro en este navegador
   function activateLicense(key, quiet) {
     if (!CFG.supabaseUrl) { if (!quiet) toast('No se puede activar sin conexión al servidor'); return Promise.resolve(false); }
     activating = true; if (!quiet) render();
-    return fetch(CFG.supabaseUrl + '/functions/v1/activate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey || '' }, body: JSON.stringify({ key })
-    }).then(r => r.json().catch(() => ({}))).then(d => {
+    return licenseCall(key, 'activate').then(d => {
       activating = false;
       if (d && d.ok) {
-        prefs.license = d.key; prefs.licenseEmail = d.email || null; prefsSave();
+        prefs.license = d.key; prefs.licenseEmail = d.email || null; prefs.licenseCheckedAt = Date.now(); prefsSave();
         try { localStorage.removeItem(LS_PENDING_KEY); } catch (e) {}
         track('pro_activated'); render(); toast('¡Pro activado!'); return true;
       }
       if (!quiet) { render(); toast((d && d.error) || 'No encontramos esa clave'); }
+      else if (d && d.limit) toast(d.error);
       return false;
     }).catch(() => { activating = false; if (!quiet) { render(); toast('No se pudo conectar. Inténtalo de nuevo.'); } return false; });
+  }
+
+  // Comprobación periódica: si la clave se ha revocado o este equipo ya no está autorizado, se quita Pro.
+  // Sin conexión o si el servidor falla, Pro se mantiene y se vuelve a intentar más tarde.
+  function checkLicense() {
+    if (!isPro() || !CFG.supabaseUrl || navigator.onLine === false) return;
+    if (prefs.licenseCheckedAt && Date.now() - prefs.licenseCheckedAt < LICENSE_CHECK_MS) return;
+    licenseCall(prefs.license, 'check').then(d => {
+      if (!isPro()) return;
+      if (d && d.ok) { prefs.licenseCheckedAt = Date.now(); prefsSave(); return; }
+      if (d && d.invalid) {
+        dropLicense(); track('pro_revoked'); render();
+        toast(d.limit ? d.error : 'Tu licencia Pro ya no es válida en este navegador. Escríbenos a nprojects@nprojects.app si crees que es un error.');
+      }
+    }).catch(() => {});
   }
 
   function settingsHTML() {
@@ -662,7 +709,9 @@
     if (act === 'back') { view = 'main'; return render(); }
     if (act === 'unlicense') {
       if (!confirm('¿Quitar la licencia Pro de este navegador? Podrás volver a activarla con tu clave.')) return;
-      prefs.license = null; prefs.licenseEmail = null; prefsSave(); return render();
+      const k = prefs.license;
+      if (CFG.supabaseUrl) licenseCall(k, 'release').catch(() => {});
+      dropLicense(); return render();
     }
     if (act === 'prev') {
       if (limited() && viewDate <= shiftKey(todayKey(), -(FREE_DAYS - 1))) return toast(`El plan Gratis muestra los últimos ${FREE_DAYS} días. Con Pro ves todo tu historial.`);
@@ -795,6 +844,9 @@
   render();
   // Clave guardada por la página de «gracias» tras la compra: se activa sola
   try { const pend = localStorage.getItem(LS_PENDING_KEY); if (pend && !isPro()) activateLicense(pend, true); } catch (e) {}
+  checkLicense();
+  setInterval(checkLicense, 6 * 3600e3);
+  window.addEventListener('online', checkLicense);
   setInterval(tick, 1000);
   setInterval(() => mFlush(false), 30 * 60e3);
   // Funcionar sin conexión (y requisito para publicar en la Microsoft Store)
