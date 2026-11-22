@@ -382,13 +382,13 @@
       <div class="panel">
         <h3>Nprojects Pro <span class="pro-badge">Activado</span></h3>
         <p class="small muted">Clave ${esc(prefs.license)}${prefs.licenseEmail ? ` · ${esc(prefs.licenseEmail)}` : ''}. Gracias por apoyar nprojects.</p>
-        <p class="small muted">Tu licencia es personal y vale para 3 equipos o navegadores. Si cambias de ordenador, quítala aquí primero para liberar el hueco.</p>
+        <p class="small muted">Tu licencia es personal y vale para 2 equipos o navegadores. Si cambias de ordenador, quítala aquí primero para liberar el hueco.</p>
         <button data-act="unlicense">Quitar la licencia de este navegador</button>
       </div>`;
     return `
       <form class="panel" data-form="license">
         <h3>Nprojects Pro</h3>
-        <p class="small muted">Hasta 10 proyectos a la vez, historial completo, estadísticas y exportación. Pago único de 29 €. Una licencia personal para 3 equipos o navegadores.</p>
+        <p class="small muted">Hasta 10 proyectos a la vez, historial completo, estadísticas y exportación. Pago único de 29 €. Una licencia personal para 2 equipos o navegadores.</p>
         <div class="addrow"><input name="key" placeholder="NPRJ-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" aria-label="Clave de licencia"><button class="primary" type="submit" ${activating ? 'disabled' : ''}>${activating ? 'Comprobando…' : 'Activar'}</button></div>
         <p class="small muted">¿Aún no la tienes? <a href="../comprar/" target="_blank" rel="noopener">Comprar Pro</a></p>
       </form>`;

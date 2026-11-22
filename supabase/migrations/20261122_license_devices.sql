@@ -1,6 +1,6 @@
 -- Equipos (navegadores o apps) donde se ha activado cada licencia Pro.
 -- Cada instalación de la app genera un identificador aleatorio (device_id) y lo envía al activar.
--- La función «activate» limita cuántos equipos puede tener una misma clave (LICENSE_MAX_DEVICES, 3 por defecto).
+-- La función «activate» limita cuántos equipos puede tener una misma clave (LICENSE_MAX_DEVICES, 2 por defecto).
 create table if not exists public.license_devices (
   id bigint generated always as identity primary key,
   license_id bigint not null references public.licenses(id) on delete cascade,

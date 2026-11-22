@@ -4,7 +4,7 @@
 //   - device: identificador aleatorio (UUID) de esta instalación de la app.
 //   - action: 'activate' (por defecto), 'check' (comprobación periódica) o 'release' (quitar la licencia de este equipo).
 //
-// Cada clave puede estar activa en LICENSE_MAX_DEVICES equipos (3 por defecto). Un equipo ya registrado
+// Cada clave puede estar activa en LICENSE_MAX_DEVICES equipos (2 por defecto). Un equipo ya registrado
 // siempre entra; uno nuevo solo si queda hueco. 'check' hace lo mismo que 'activate', para que las
 // instalaciones activadas antes de existir este límite se registren solas en su primera comprobación.
 // Un equipo que lleva más de STALE_DAYS días sin comprobar la licencia libera su hueco.
@@ -15,7 +15,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json, normalizeKey, maskEmail } from '../_shared/common.ts';
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-const MAX_DEVICES = Math.max(1, Number(Deno.env.get('LICENSE_MAX_DEVICES') ?? 3) || 3);
+const MAX_DEVICES = Math.max(1, Number(Deno.env.get('LICENSE_MAX_DEVICES') ?? 2) || 2);
 const STALE_DAYS = 45;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
