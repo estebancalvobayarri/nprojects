@@ -1,6 +1,6 @@
 # nprojects
 
-Contador de tiempo multiproyecto para Mac y Windows. Este repositorio aloja la web de lista de espera y la web app en beta.
+Contador de tiempo multiproyecto. Beta como app web instalable desde Chrome y Edge; después llegará la app para Windows. Este repositorio aloja la web de lista de espera y la web app en beta.
 
 ## La web
 
