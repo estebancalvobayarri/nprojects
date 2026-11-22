@@ -272,7 +272,7 @@
         <button data-act="pause" ${a ? '' : 'disabled'}>Pausa</button>
         <button class="primary" data-act="end">Terminar jornada</button>
       </div>
-      <div class="hint">Clic en un proyecto para cambiar · clic en el activo para pausar</div>
+      <div class="hint tip">Clic en un proyecto para cambiar · Clic en el activo para pausar</div>
       <nav class="links">
         <button data-act="go" data-v="summary">Resumen</button>
         <button data-act="go" data-v="segments">Tramos</button>
