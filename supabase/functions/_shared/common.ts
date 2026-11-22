@@ -100,7 +100,7 @@ export function licenseEmail(key: string, test: boolean) {
 <p style="margin:0 0 20px;padding:14px 16px;background:#F7F6F3;border:1px solid #E6E3DC;border-radius:12px;font-family:Menlo,Consolas,monospace;font-size:20px;font-weight:700;letter-spacing:.04em">${escapeHtml(key)}</p>
 <p style="margin:0 0 8px"><strong>Cómo activarla</strong></p>
 <ol style="margin:0 0 16px;padding-left:20px"><li>Abre <a href="${SITE}/app/" style="color:#C2410C">nprojects</a>.</li><li>Ve a <em>Ajustes → nprojects Pro</em>.</li><li>Pega la clave y pulsa <em>Activar</em>.</li></ol>
-<p style="margin:0 0 16px">Puedes activarla en tus ordenadores con Windows o Mac. Guarda este correo por si la necesitas más adelante.</p>
+<p style="margin:0 0 16px">Es una licencia personal: puedes activarla en hasta 2 equipos o navegadores tuyos, con Windows o Mac. Guarda este correo por si la necesitas más adelante.</p>
 <p style="margin:0">Si tienes cualquier duda, responde a este correo.</p>`);
   const text = `¡Gracias por comprar nprojects Pro!
 
@@ -110,6 +110,8 @@ Cómo activarla:
 1. Abre nprojects: ${SITE}/app/
 2. Ve a Ajustes → nprojects Pro.
 3. Pega la clave y pulsa Activar.
+
+Es una licencia personal: puedes activarla en hasta 2 equipos o navegadores tuyos.
 
 Guarda este correo por si la necesitas más adelante. Si tienes cualquier duda, responde a este correo.
 
